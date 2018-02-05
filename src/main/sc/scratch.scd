@@ -1,63 +1,57 @@
 
-//Snävare bandvåg = mer ton (glas/metall)
+//"https://composerprogrammer.com/teaching/supercollider/sctutorial/2.4 Modulation Synthesis.html"
+
+
+
+
+play({ PMOsc.ar(Line.kr(600, 900, 5), 600, 3, 0, 0.1) }); // modulate carfreq
+play({ PMOsc.ar(300, Line.kr(600, 900, 5), 3, 0, 0.1) }); // modulate modfreq
+play({ PMOsc.ar(300, 550, Line.ar(0,20,8), 0, 0.1) }); // modulate index
+
+
 (
-Synth("pulseInstrument", [pulseFreq: 0.34, filtFreq: 70, filtBw: 0.00001, amp: 1, dur: 6 ]);
-Synth("pulseInstrument", [pulseFreq: 0.13, filtFreq: 99, filtBw: 0.00001, amp: 1, dur: 6 ]);
+e = Env.linen(2, 5, 2);
+Routine.run({
+    loop({
+        play({
+            LinPan2.ar(EnvGen.ar(e) *
+                PMOsc.ar(2000.0.rand,800.0.rand, Line.kr(0.0, 12.0.rand,9),0,0.1), 1.0.rand2)});
+        2.wait;
+    })
+}))
+
+
+
+(
+
+SynthDef(\fm, {
+	arg dur, carFreqBus, modFreqBus, modIndexBus, ampBus, out = 0;
+	var carFreq, modFreq, modIndex, amp;
+	Line.kr(dur:dur, doneAction:2);
+	carFreq = In.kr(carFreqBus);
+	modFreq = In.kr(modFreqBus);
+	modIndex = In.kr(modIndexBus);
+	amp = In.kr(ampBus);
+
+	Out.ar(out, PMOsc.ar(carFreq, modFreq, modIndex, 0, 1, 0) * amp);
+}).add;
+
+
 )
 
 (
-Synth("pulseInstrument", [startPulseFreq: 5, endPulseFreq: 23, startFiltFreq: 7000, endFiltFreq: 9000, startFiltBw: 0.0000001, endFiltBw: 0.00001, amp: 1, dur: 13, startPan: -1, endPan: 1 ]);
-Synth("pulseInstrument", [startPulseFreq: 7, endPulseFreq: 25, startFiltFreq: 6000, endFiltFreq: 8500, startFiltBw: 0.00001, endFiltBw: 0.0000001, amp: 1, dur: 13 ]);
-Synth("noiseInstrument", [startFiltFreq: 200, endFiltFreq: 1000, startFiltBw: 0.001, endFiltBw: 0.0001, amp: 0.9, dur: 13, startPan: -1, endPan: 1 ]);
+Synth("lineControl", [dur: 15, startValue: 500, endValue: 600, out: 13], addAction:\addToTail);
+Synth("lineControl", [dur: 15, startValue: 700, endValue: 750, out: 14], addAction:\addToTail);
+Synth("arControl", [dur: 15, attackTime: 0.7, attackStart: 1, releaseStart: 10, releaseEnd: 1, out: 15], addAction:\addToTail);
+Synth("arControl", [dur: 15, attackTime: 0.3, attackStart: 0, releaseStart: 1, releaseEnd: 0, out: 16], addAction:\addToTail);
+
+Synth("fm", [dur: 15, carFreqBus: 13, modFreqBus: 14, modIndexBus: 15, ampBus: 16, out: 0], addAction:\addToTail);
+
+
 )
 
-(
-Synth("noiseInstrument", [startFiltFreq: 200, endFiltFreq: 1000, startFiltBw: 0.001, endFiltBw: 0.0001, amp: 0.9, dur: 13, startPan: -1, endPan: 1 ]);
-)
+{ Saw.ar(100,0.2) }.play;
+{ Pulse.ar(100,0.2) }.play;
+{ LFTri.ar(100,0.5) }.play;
 
 
-/*
-http://community.dur.ac.uk/nick.collins/teaching/supercollider/sctutorial/6.4 Effects 1.html
-http://ecmc.rochester.edu/ecmc/docs/supercollider/scbook/Ch21_Interface_Investigations/ixi SC tutorial/ixi_SC_tutorial_12.html
-
-http://doc.sccode.org/Tutorials/Mark_Polishook_tutorial/17_Delays_reverbs.html
-http://doc.sccode.org/Classes/NestedAllpassC.html
-
-(
-{
-var s, z, y;
-    // 10 voices of a random sine percussion sound :
-s = Mix.ar(Array.fill(10, { Resonz.ar(Dust.ar(0.2, 50), 200 + 3000.0.rand, 0.003)}) );
-    // reverb predelay time :
-z = DelayN.ar(s, 0.048);
-    // 7 length modulated comb delays in parallel :
-y = Mix.ar(Array.fill(7,{ CombL.ar(z, 0.1, LFNoise1.kr(0.1.rand, 0.04, 0.05), 15) }));
-    // two parallel chains of 4 allpass delays (8 total) :
-4.do({ y = AllpassN.ar(y, 0.050, [0.050.rand, 0.050.rand], 1) });
-    // add original sound to reverb and play it :
-s+(0.2*y)
-}.scope
-)
-*/
-
-
-
-/*
-Maybee we should use Rotate2 to rotate sounds?
-(
-{
-    // rotation via lfo
-    var x, y;
-    x = PinkNoise.ar(0.4);
-    y = LFTri.ar(800) * LFPulse.kr(3,0,0.3,0.2);
-    #x, y = Rotate2.ar(x, y, LFSaw.kr(0.1));
-    [x,y]
-}.play;
-)
-
-*/
-
-/*
-Make delay with "composed" speed and delaytime from series
-
-*/

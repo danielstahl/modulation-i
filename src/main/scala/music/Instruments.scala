@@ -401,6 +401,46 @@ object Instruments {
         widthBus.buildBus()
   }
 
+  class SineInstrumentBuilder extends AbstractInstrumentBuilder with DurBuilder with OutputBuilder {
+    type SelfType = SineInstrumentBuilder
+
+    def self(): SelfType = this
+
+    val instrumentName: String = "sine"
+
+    val ampBus = ControlArgumentBuilder[SineInstrumentBuilder](this, "ampBus")
+    val freqBus = ControlArgumentBuilder[SineInstrumentBuilder](this, "freqBus")
+
+    override def build(): Seq[Object] =
+      super.build() ++
+        buildOut() ++
+        buildDur() ++
+        ampBus.buildBus() ++
+        freqBus.buildBus()
+  }
+
+  class FmInstrumentBuilder extends AbstractInstrumentBuilder with DurBuilder with OutputBuilder {
+    type SelfType = FmInstrumentBuilder
+
+    def self(): SelfType = this
+
+    val instrumentName: String = "fm"
+
+    val ampBus = ControlArgumentBuilder[FmInstrumentBuilder](this, "ampBus")
+    val carFreqBus = ControlArgumentBuilder[FmInstrumentBuilder](this, "carFreqBus")
+    val modFreqBus = ControlArgumentBuilder[FmInstrumentBuilder](this, "modFreqBus")
+    val modIndexBus = ControlArgumentBuilder[FmInstrumentBuilder](this, "modIndexBus")
+
+    override def build(): Seq[Object] =
+      super.build() ++
+        buildOut() ++
+        buildDur() ++
+        ampBus.buildBus() ++
+        carFreqBus.buildBus() ++
+        modFreqBus.buildBus() ++
+        modIndexBus.buildBus()
+  }
+
   abstract class CommonVolumeBuilder extends AbstractInstrumentBuilder with DurBuilder with InputBuilder {
 
     val ampBus = ControlArgumentBuilder[SelfType](self(), "ampBus")

@@ -41,3 +41,10 @@ SynthDescLib.global.browse;
 s.prepareForRecord('/Users/danielstahl/Documents/Projects/modulation-i_mix/mvnt-I/mvnt-I_sc.aiff');
 s.record;
 s.stopRecording;
+
+NetAddr.langPort;
+NetAddr.localAddr;
+OSCFunc.trace(true);
+OSCFunc.trace(false);
+
+Platform.systemExtensionDir;
