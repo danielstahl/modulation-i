@@ -35,6 +35,18 @@ SynthDef(\arControl, {
 	Out.kr(out, EnvGen.kr(arEnv, doneAction:2));
 }).add;
 
+SynthDef(\sineControl, {
+	arg dur, out = 0, phase = 0,
+	startFreq, endFreq,
+	mulStart = 1, mulEnd = 1,
+	addStart = 0, addEnd = 0;
+	var freqEnv, mulEnv, addEnv;
+	freqEnv = Line.kr(startFreq, endFreq, dur, doneAction:2);
+	mulEnv = Line.kr(mulStart, mulEnd, dur);
+	addEnv = Line.kr(addStart, addEnd, dur);
+	Out.kr(out, SinOsc.kr(freq:freqEnv, phase:phase, mul:mulEnv, add:addEnv));
+}).add;
+
 SynthDef(\sineControlReplace, {
 	arg dur = 1, in = 0, startFreq = 1, endFreq = 1, startAmp = 1, endAmp = 1;
 	var freqEnv, input, ampEnv;
@@ -73,6 +85,27 @@ SynthDef(\pulse, {
 	Out.ar(out, pulse * amp);
 }).add;
 
+SynthDef(\sine, {
+	arg dur, freqBus, ampBus, out = 0;
+	var freq, amp;
+	Line.kr(dur:dur, doneAction:2);
+	freq = In.kr(freqBus);
+	amp = In.kr(ampBus);
+
+	Out.ar(out, SinOsc.ar(freq) * amp);
+}).add;
+
+SynthDef(\fm, {
+	arg dur, carFreqBus, modFreqBus, modIndexBus, ampBus, out = 0;
+	var carFreq, modFreq, modIndex, amp;
+	Line.kr(dur:dur, doneAction:2);
+	carFreq = In.kr(carFreqBus);
+	modFreq = In.kr(modFreqBus);
+	modIndex = In.kr(modIndexBus);
+	amp = In.kr(ampBus);
+
+	Out.ar(out, PMOsc.ar(carFreq, modFreq, modIndex, 0, 1, 0) * amp);
+}).add;
 
 SynthDef(\filt, {
 	arg dur = 1, ampBus = 0, freqBus = 1, bwBus = 2, in = 0, out = 0;
