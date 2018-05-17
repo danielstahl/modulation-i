@@ -4,7 +4,7 @@ import music.Instruments.ARControlInstrumentBuilder.ar
 import music.Instruments.LineControlInstrumentBuilder.line
 import music.Instruments._
 import net.soundmining.Instrument.{SOURCE, TAIL_ACTION}
-import net.soundmining.{BusGenerator, MusicPlayer}
+import net.soundmining.{BusGenerator, ControlInstrumentBuilder, MusicPlayer}
 import net.soundmining.Utils.absoluteTimeToMillis
 
 case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
@@ -65,17 +65,21 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     player.sendNew(absoluteTimeToMillis(start), instrumentBundle ++ panBundle ++ effect)
   }
 
-  def fm(carFreq: Float, modFreq: Float, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): PlayClass = {
+  def fmControl(carFreqControl: ControlInstrumentBuilder, modFreqControl: ControlInstrumentBuilder, modIndexControl: ControlInstrumentBuilder, attack: Float, amp: Float = 0.2f): PlayClass = {
     instrumentBundle = new FmInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
       .dur(dur)
-      .carFreqBus.control(line(dur, carFreq, carFreq))
-      .modFreqBus.control(line(dur, modFreq, modFreq))
-      .modIndexBus.control(ar(dur, indexAttack, index))
+      .carFreqBus.control(carFreqControl)
+      .modFreqBus.control(modFreqControl)
+      .modIndexBus.control(modIndexControl)
       .ampBus.control(ar(dur, attack, (0f, amp, 0f)))
       .buildInstruments()
     this
+  }
+
+  def fm(carFreq: Float, modFreq: Float, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): PlayClass = {
+    fmControl(line(dur, carFreq, carFreq), line(dur, modFreq, modFreq), ar(dur, indexAttack, index), attack, amp)
   }
 
   def fmMod(carFreq: Float, modBus: Int, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): PlayClass = {
