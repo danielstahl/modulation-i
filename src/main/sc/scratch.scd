@@ -57,4 +57,3 @@ Synth("fm", [dur: 15, carFreqBus: 13, modFreqBus: 14, modIndexBus: 15, ampBus: 1
 { SinOsc.ar(440+(SinOsc.ar(880)*880*16), 0.0,0.1) }.play;
 
 
-

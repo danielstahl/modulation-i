@@ -9,6 +9,67 @@ import net.soundmining._
  * Instruments
  */
 object Instruments {
+  object SineControlInstrumentBuilder {
+    def sin(dur: Float, startFreq: Float, endFreq: Float, phase: Float = 0, mulStart: Float = 1.0f, mulEnd: Float = 1.0f, addStart: Float = 0, addEnd: Float = 0, nodeId: Node = SOURCE) =
+      new SineControlInstrumentBuilder()
+        .nodeId(nodeId)
+        .freq(startFreq, endFreq)
+        .phase(phase)
+        .mul(mulStart, mulEnd)
+        .add(addStart, addEnd)
+        .dur(dur)
+  }
+
+  class SineControlInstrumentBuilder extends AbstractInstrumentBuilder with ControlInstrumentBuilder {
+    type SelfType = SineControlInstrumentBuilder
+    def self(): SelfType = this
+    val instrumentName: String = "sineControl"
+
+    var startFreq: jl.Float = buildFloat(1.0f)
+    var endFreq: jl.Float = buildFloat(1.0f)
+    var phase: jl.Float = buildFloat(0f)
+    var mulStart: jl.Float = buildFloat(1.0f)
+    var mulEnd: jl.Float = buildFloat(1.0f)
+    var addStart: jl.Float = buildFloat(0.0f)
+    var addEnd: jl.Float = buildFloat(0.0f)
+
+    def freq(start: Float, end: Float): SelfType = {
+      startFreq = buildFloat(start)
+      endFreq = buildFloat(end)
+      self()
+    }
+
+    def phase(phaseValue: Float): SelfType = {
+      phase = buildFloat(phaseValue)
+      self()
+    }
+
+    def mul(start: Float, end: Float): SelfType = {
+      mulStart = buildFloat(start)
+      mulEnd = buildFloat(end)
+      self()
+    }
+
+    def add(start: Float, end: Float): SelfType = {
+      addStart = buildFloat(start)
+      addEnd = buildFloat(end)
+      self()
+    }
+
+    override def build(): Seq[Object] =
+      super.build() ++
+        buildOut() ++
+        buildDur() ++
+        Seq(
+          "startFreq", startFreq,
+          "endFreq", endFreq,
+          "phase", phase,
+          "mulStart", mulStart,
+          "mulEnd", mulEnd,
+          "addStart", addStart,
+          "addEnd", addEnd)
+  }
+
   class SineControlReplaceInstrumentBuilder extends AbstractInstrumentBuilder with ControlReplaceInstrumentBuilder {
     type SelfType = SineControlReplaceInstrumentBuilder
 

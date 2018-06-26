@@ -2,6 +2,7 @@ package music
 
 import music.Instruments.ARControlInstrumentBuilder.ar
 import music.Instruments.LineControlInstrumentBuilder.line
+import music.Instruments.SineControlInstrumentBuilder._
 import music.Instruments._
 import net.soundmining.Instrument.{SOURCE, TAIL_ACTION}
 import net.soundmining.{BusGenerator, ControlInstrumentBuilder, MusicPlayer}
@@ -38,6 +39,17 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
         .freqBus.bus(freqBus)
         .ampBus.control(ar(dur, attack, (0f, amp, 0f)))
         .buildInstruments()
+    this
+  }
+
+  def sineSineAmp(freq: Float, amp: (Float, Float), ampSpeed: (Float, Float)): PlayClass = {
+    instrumentBundle = new SineInstrumentBuilder()
+      .addAction(TAIL_ACTION)
+      .out(bus)
+      .dur(dur)
+      .freqBus.control(line(dur, freq, freq))
+      .ampBus.control(sin(dur, ampSpeed._1/dur/2, ampSpeed._2/dur/2, mulStart = amp._1, mulEnd = amp._2))
+      .buildInstruments()
     this
   }
 

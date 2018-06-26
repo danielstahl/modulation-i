@@ -13,18 +13,6 @@ import net.soundmining.Utils.absoluteTimeToMillis
 
 object MelodyTwo {
 
-  /*
-  * Fm with glissando. Slow and fast. High and low.
-  * Make new fm play functions that takes a control
-  * instrument so its possible to do different types
-  * of glissando
-  *
-  * Point music in start and end.
-  *
-  * Broken record type of repeat in the middle with very
-  * small variations.
-  * */
-
   def melodyTwo(start: Float)(implicit player: MusicPlayer): Unit = {
     val c2 = noteToHertz('c2)
     val c3 = noteToHertz('c3)
