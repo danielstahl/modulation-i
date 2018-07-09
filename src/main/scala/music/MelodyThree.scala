@@ -127,28 +127,30 @@ object MelodyThree {
 
     effect(play.effectBus)
 
-    melodyThreePart1(start, spectrum, rhythmSpectrum)
-    melodyThreePart2(38.835045f + 6.1318502f, spectrum, rhythmSpectrum)
-    melodyThreePart3(38.835045f + 6.1318502f + 35.769127f, spectrum, rhythmSpectrum)
-    melodyThreePart4(start = 38.835045f + 6.1318502f + 35.769127f + 32.19221f, spectrum, rhythmSpectrum)
-  }
+    val times = Seq(
+      rhythmSpectrum(3) * 22,
+      rhythmSpectrum(1) * 35,
+      rhythmSpectrum(0) * 63,
+      rhythmSpectrum(3) * 40,
+      rhythmSpectrum(1) * 40,
+      rhythmSpectrum.head * 70,
+      rhythmSpectrum(3) * 40)
 
-  def testMelodyThree(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
-    val fms = Seq((1, 3), (5, 6), (7, 8))
-    val times = Melody.absolute(0.0f, pulse(size = 3, 2.0f).generate())
-    val dur = 2f
-    (times zip fms).foreach {
-      case (time: Float, (car: Int, mod: Int)) =>
-        play(time, dur)
-          .fmControl(
-            carFreqControl = line(dur, spectrum(car), spectrum(car)),
-            modFreqControl = line(dur, spectrum(mod), spectrum(mod)),
-            modIndexControl = ar(dur, 0.66f, (5, 7, 6)),
-            attack = 0.33f,
-            amp = 0.5f)
-          .pan(0, 0)
-          .send()
-    }
+
+    println(s"times $times")
+
+    val startTimes = Melody.absolute(start, times)
+    println(s"startTimes $startTimes")
+
+
+    melodyThreePart1(start = startTimes.head, spectrum, rhythmSpectrum)
+    melodyThreePart2(start = startTimes(1), spectrum, rhythmSpectrum)
+    melodyThreePart3(start = startTimes(2), spectrum, rhythmSpectrum)
+    melodyThreePart4(start = startTimes(3), spectrum, rhythmSpectrum)
+    melodyThreePart5(start = startTimes(4), spectrum, rhythmSpectrum)
+    melodyThreePart6(start = startTimes(5), spectrum, rhythmSpectrum)
+    melodyThreePart7(start = startTimes(6), spectrum, rhythmSpectrum)
+
   }
 
   def melodyThreePart1(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
@@ -176,8 +178,19 @@ object MelodyThree {
         .pan(0, 0)
         .send())
 
+    /*
+    startTimes.foreach(time =>
+      play(time, dur)
+        .fmControl(
+          carFreqControl = line(dur, spec(0), spec(0)),
+          modFreqControl = line(dur, spec(0), spec(0)),
+          modIndexControl = ar(dur, 0.66f, (5, 7, 6)),
+          attack = 0.33f,
+          amp = 0.4f)
+        .pan(-0.2f, 0.2f)
+        .send())
+*/
     val sidebands = makeFmSynthesis(spec(car), spec(mod), 30)
-
 
     playSideBands(start = 0.0f,
       times = pattern(Seq(22), grid).generate(),
@@ -544,8 +557,8 @@ object MelodyThree {
 
     val grid = pulse(40, rhythmSpectrum(3))
 
-    //37
     val times = pattern(Seq(1, 1, 5, 1, 5, 3, 2, 5, 2, 2, 5, 5), grid).generate()
+
     val startTimes = Melody.absolute(start, times)
 
     startTimes.foreach(time =>
@@ -644,6 +657,198 @@ object MelodyThree {
       amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f))
   }
 
+  def melodyThreePart5(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+
+    //1, 1, 2, 3, 5, 8, 13, 21, 34, 55
+    // based on part2 sidebands 1
+    val grid = pulse(40, rhythmSpectrum(1))
+
+    val dur = rhythmSpectrum(1)
+
+    val car = 6
+    val mod = 5
+
+    val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
+
+    playSideBands(start = start,
+      times = pattern(Seq(34), grid).generate(),
+      freq = sidebands(1)._1,
+      pans = Seq((0.0f, 0.0f)),
+      attacks = Seq(0.5f),
+      amps = Seq(0.5f))
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(21, 13), grid).generate(),
+      freq = sidebands(3)._1,
+      pans = Seq((0.3f, 0.3f), (0.3f, 0.3f)),
+      attacks = Seq(0.66f, 0.33f),
+      amps = Seq(0.3f, 0.3f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(13, 21), grid).generate(),
+      freq = sidebands(3)._2,
+      pans = Seq((-0.3f, -0.3f), (-0.3f, -0.3f)),
+      attacks = Seq(0.66f, 0.33f),
+      amps = Seq(0.3f, 0.3f))
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(13, 13, 13), grid).generate(),
+      freq = sidebands(6)._1,
+      pans = Seq((0.6f, 0.6f), (0.6f, 0.6f), (0.6f, 0.6f)),
+      attacks = Seq(0.66f, 0.5f, 0.33f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(13, 13, 13), grid).generate(),
+      freq = sidebands(6)._2,
+      pans = Seq((-0.6f, -0.6f), (-0.6f, -0.6f), (-0.6f, -0.6f)),
+      attacks = Seq(0.66f, 0.5f, 0.33f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(8, 8, 8, 8, 8), grid).generate(),
+      freq = sidebands(10)._1,
+      pans = Seq((0.8f, 0.8f), (0.8f, 0.8f), (0.8f, 0.8f), (0.8f, 0.8f), (0.8f, 0.8f)),
+      attacks = Seq(0.5f, 0.33f, 0.5f, 0.66f, 0.5f),
+      amps = Seq(0.1f, 0.1f, 0.1f, 0.1f, 0.1f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(8, 8, 8, 8, 8), grid).generate(),
+      freq = sidebands(10)._2,
+      pans = Seq((-0.8f, -0.8f), (-0.8f, -0.8f), (-0.8f, -0.8f), (-0.8f, -0.8f), (-0.8f, -0.8f)),
+      attacks = Seq(0.5f, 0.33f, 0.5f, 0.66f, 0.5f),
+      amps = Seq(0.1f, 0.1f, 0.1f, 0.1f, 0.1f))
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(5, 5, 5, 5, 5, 5, 5, 5), grid).generate(),
+      freq = sidebands(15)._1,
+      pans = Seq((0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f)),
+      attacks = Seq(0.66f, 0.5f, 0.33f, 0.5f, 0.66f, 0.5f, 0.33f, 0.5f),
+      amps = Seq(0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(5, 5, 5, 5, 5, 5, 5, 5), grid).generate(),
+      freq = sidebands(15)._2,
+      pans = Seq((-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f)),
+      attacks = Seq(0.66f, 0.5f, 0.33f, 0.5f, 0.66f, 0.5f, 0.33f, 0.5f),
+      amps = Seq(0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f))
+  }
+
+  def melodyThreePart6(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+    val grid = pulse(70, rhythmSpectrum(0))
+
+    val car = 7
+    val mod = 8
+
+    val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
+
+    playSideBands(start = start,
+      times = pattern(Seq(76), grid).generate(),
+      freq = sidebands(1)._1,
+      pans = Seq((0.0f, 0.0f)),
+      attacks = Seq(0.5f),
+      amps = Seq(0.5f))
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(29, 47), grid).generate(),
+      freq = sidebands(2)._1,
+      pans = Seq((0.7f, 0.7f), (0.7f, 0.7f)),
+      attacks = Seq(0.66f, 0.33f),
+      amps = Seq(0.3f, 0.3f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(47, 29), grid).generate(),
+      freq = sidebands(3)._2,
+      pans = Seq((-0.7f, -0.7f), (-0.7f, -0.7f)),
+      attacks = Seq(0.33f, 0.66f),
+      amps = Seq(0.3f, 0.3f))
+
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(18, 29, 18), grid).generate(),
+      freq = sidebands(5)._2,
+      pans = Seq((0.5f, 0.5f), (0.5f, 0.5f), (0.5f, 0.5f)),
+      attacks = Seq(0.66f, 0.5f, 0.33f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(29, 18, 18), grid).generate(),
+      freq = sidebands(7)._1,
+      pans = Seq((-0.1f, 0.1f), (0.1f, -0.1f), (-0.1f, 0.1f)),
+      attacks = Seq(0.5f, 0.66f, 0.33f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(18, 18, 29), grid).generate(),
+      freq = sidebands(9)._2,
+      pans = Seq((-0.5f, -0.5f), (-0.5f, -0.5f), (-0.5f, -0.5f)),
+      attacks = Seq(0.33f, 0.5f, 0.66f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+    // 18 29 18
+  }
+
+  def melodyThreePart7(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+    val grid = pulse(40, rhythmSpectrum(3))
+
+    val car = 1
+    val mod = 3
+
+    val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
+
+    playSideBands(start = start,
+      times = pattern(Seq(29), grid).generate(),
+      freq = sidebands(1)._1,
+      pans = Seq((0.0f, 0.0f)),
+      attacks = Seq(0.5f),
+      amps = Seq(0.5f))
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(11, 18), grid).generate(),
+      freq = sidebands(3)._1,
+      pans = Seq((-0.2f, -0.2f), (-0.2f, -0.2f)),
+      attacks = Seq(0.33f, 0.66f),
+      amps = Seq(0.3f, 0.3f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(18, 11), grid).generate(),
+      freq = sidebands(5)._1,
+      pans = Seq((0.2f, 0.2f), (0.2f, 0.2f)),
+      attacks = Seq(0.66f, 0.33f),
+      amps = Seq(0.3f, 0.3f))
+
+
+
+    playSideBands(start = start,
+      times = pattern(Seq(11, 18, 11), grid).generate(),
+      freq = sidebands(7)._1,
+      pans = Seq((0.5f, 0.7f), (0.7f, 0.9f), (0.9f, 0.6f)),
+      attacks = Seq(0.66f, 0.5f, 0.33f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(18, 11, 11), grid).generate(),
+      freq = sidebands(9)._1,
+      pans = Seq((-0.1f, 0.1f), (0.1f, -0.1f), (-0.1f, 0.1f)),
+      attacks = Seq(0.5f, 0.66f, 0.33f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+
+    playSideBands(start = start,
+      times = pattern(Seq(11, 11, 18), grid).generate(),
+      freq = sidebands(11)._1,
+      pans = Seq((-0.5f, -0.7f), (-0.7f, -0.9f), (-0.9f, -0.6f)),
+      attacks = Seq(0.33f, 0.5f, 0.66f),
+      amps = Seq(0.2f, 0.2f, 0.2f))
+  }
+
   def main(args: Array[String]): Unit = {
     val c2 = noteToHertz('c2)
     val c3 = noteToHertz('c3)
@@ -651,11 +856,6 @@ object MelodyThree {
 
     val naturalFact = makeFact(c2, c3)
     val rhythmSpectrum = makeSpectrum2(cminus5, naturalFact, 25)
-
-    println(join(pulse(10, 2.0f), pulse(10, 2.3f)).generate())
-
-    val grid = pulse(10, 2.0f)
-    println(pattern(Seq(1, 1, 2, 1, 1, 2), grid).generate())
 
     BusGenerator.reset()
     implicit val player: MusicPlayer = MusicPlayer()
