@@ -9,10 +9,20 @@ Server.local.options.numBuffers = 2056;
 Server.internal.options.numBuffers = 2056;
 )
 
+
 (
 Server.local.options.device = "Scarlett 2i2 USB";
 Server.internal.options.device = "Scarlett 2i2 USB";
 )
+
+(
+Server.local.options.device = "Soundflower (2ch)";
+Server.internal.options.device = "Soundflower (2ch)";
+)
+
+
+
+ServerOptions.devices;
 
 s.boot;
 s.shutdown;

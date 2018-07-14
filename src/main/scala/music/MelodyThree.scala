@@ -112,7 +112,6 @@ object MelodyThree {
 
   def melodyThree(start: Float)(implicit player: MusicPlayer): Unit = {
     val c0 = noteToHertz('c0)
-    val c1 = noteToHertz('c1)
     val c2 = noteToHertz('c2)
     val c3 = noteToHertz('c3)
     val cminus5 = noteToHertz('c0) / 2f / 2f / 2f / 2f / 2f
@@ -120,7 +119,6 @@ object MelodyThree {
     val naturalFact = makeFact(c2, c3)
 
     val spectrum = makeSpectrum2(c0, naturalFact, 25)
-    val spectrum2 = makeSpectrum2(noteToHertz('c4), naturalFact, 25)
     val rhythmSpectrum = makeSpectrum2(cminus5, naturalFact, 25)
 
     implicit val play: Player = Player()
@@ -136,12 +134,8 @@ object MelodyThree {
       rhythmSpectrum.head * 70,
       rhythmSpectrum(3) * 40)
 
-
-    println(s"times $times")
-
     val startTimes = Melody.absolute(start, times)
     println(s"startTimes $startTimes")
-
 
     melodyThreePart1(start = startTimes.head, spectrum, rhythmSpectrum)
     melodyThreePart2(start = startTimes(1), spectrum, rhythmSpectrum)
@@ -159,8 +153,6 @@ object MelodyThree {
     val car = 1
     val mod = 3
 
-    val spec = spectrum
-
     val grid = pulse(40, rhythmSpectrum(3))
 
     //22
@@ -170,36 +162,40 @@ object MelodyThree {
     startTimes.foreach(time =>
       play(time, dur)
         .fmControl(
-          carFreqControl = line(dur, spec(car), spec(car)),
-          modFreqControl = line(dur, spec(mod), spec(mod)),
+          carFreqControl = line(dur, spectrum(car), spectrum(car)),
+          modFreqControl = line(dur, spectrum(mod), spectrum(mod)),
           modIndexControl = ar(dur, 0.66f, (5, 7, 6)),
           attack = 0.33f,
           amp = 0.5f)
         .pan(0, 0)
         .send())
 
-    /*
-    startTimes.foreach(time =>
+
+    val bassTimes = pattern(Seq(4, 9, 5), grid).generate()
+
+    val startBassTimes = Melody.absolute(start, bassTimes).drop(1)
+
+    startBassTimes.foreach(time =>
       play(time, dur)
         .fmControl(
-          carFreqControl = line(dur, spec(0), spec(0)),
-          modFreqControl = line(dur, spec(0), spec(0)),
+          carFreqControl = line(dur, spectrum(0), spectrum(0)),
+          modFreqControl = line(dur, spectrum(0), spectrum(0)),
           modIndexControl = ar(dur, 0.66f, (5, 7, 6)),
           attack = 0.33f,
           amp = 0.4f)
         .pan(-0.2f, 0.2f)
         .send())
-*/
-    val sidebands = makeFmSynthesis(spec(car), spec(mod), 30)
 
-    playSideBands(start = 0.0f,
+    val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
+
+    playSideBands(start = start,
       times = pattern(Seq(22), grid).generate(),
       freq = sidebands(1)._1,
       pans = Seq((-0.1f, -0.1f)),
       attacks = Seq(0.5f),
       amps = Seq(0.2f))
 
-    playSideBands(start = 0.0f,
+    playSideBands(start = start,
       times = pattern(Seq(22), grid).generate(),
       freq = sidebands(1)._2,
       pans = Seq((0.1f, 0.1f)),
@@ -208,7 +204,7 @@ object MelodyThree {
 
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(13, 8), grid).generate(),
       freq = sidebands(3)._1,
       pans = Seq((0.2f, -0.6f), (-0.2f, 0.6f)),
@@ -216,7 +212,7 @@ object MelodyThree {
       amps = Seq(0.1f, 0.1f))
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(13, 8), grid).generate(),
       freq = sidebands(3)._2,
       pans = Seq((0.3f, -0.7f), (-0.3f, 0.7f)),
@@ -225,7 +221,7 @@ object MelodyThree {
 
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(8, 13), grid).generate(),
       freq = sidebands(5)._1,
       pans = Seq((-0.2f, 0.6f), (0.2f, -0.6f)),
@@ -233,7 +229,7 @@ object MelodyThree {
       amps = Seq(0.05f, 0.05f))
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(8, 13), grid).generate(),
       freq = sidebands(5)._2,
       pans = Seq((-0.1f, 0.7f), (0.1f, -0.7f)),
@@ -242,7 +238,7 @@ object MelodyThree {
 
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(7, 7, 7), grid).generate(),
       freq = sidebands(7)._1,
       pans = Seq((-0.9f, -0.6f), (-0.6f, -0.3f), (-0.3f, 0.3f)),
@@ -250,7 +246,7 @@ object MelodyThree {
       amps = Seq(0.03f, 0.03f, 0.03f))
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(7, 7, 7), grid).generate(),
       freq = sidebands(7)._2,
       pans = Seq((-0.8f, -0.5f), (-0.5f, -0.2f), (-0.2f, 0.2f)),
@@ -259,7 +255,7 @@ object MelodyThree {
 
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(4, 3, 3, 4, 4, 3), grid).generate(),
       freq = sidebands(9)._1,
       pans = Seq((0.9f, 0.3f), (0.4f, -0.2f), (-0.1f, -0.4f), (-0.3f, -0.6f), (-0.7f, -0.4f), (-0.3f, 0.0f)),
@@ -267,7 +263,7 @@ object MelodyThree {
       amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f))
 
     playSideBands(
-      start = 0.0f,
+      start = start,
       times = pattern(Seq(4, 3, 3, 4, 4, 3), grid).generate(),
       freq = sidebands(9)._2,
       pans = Seq((0.8f, 0.2f), (0.5f, -0.1f), (-0.2f, -0.5f), (-0.2f, -0.7f), (-0.8f, -0.3f), (-0.4f, 0.0f)),
@@ -311,6 +307,23 @@ object MelodyThree {
 
     val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
     val sidebands2 = makeFmSynthesis(spectrum(mod), spectrum(car), 30)
+
+    val bassTimes = pattern(Seq(4, 17, 5), grid).generate()
+
+    val startBassTimes = Melody.absolute(start, bassTimes).drop(1)
+
+    (startBassTimes zip Seq((-0.3f, 0.3f), (0.3f, -0.3f))).foreach {
+      case (time, (startPan, endPan)) =>
+        play(time, dur)
+          .fmControl(
+            carFreqControl = line(dur, spectrum(0), spectrum(0)),
+            modFreqControl = line(dur, spectrum(0), spectrum(0)),
+            modIndexControl = ar(dur, 0.33f, (7, 13, 5)),
+            attack = 0.5f,
+            amp = 0.4f)
+          .pan(startPan, endPan)
+          .send()
+    }
 
     playSideBands(start = start,
       times = pattern(Seq(35), grid).generate(),
@@ -433,6 +446,24 @@ object MelodyThree {
 
     val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
     val sidebands2 = makeFmSynthesis(spectrum(mod), spectrum(car), 30)
+
+    val bassTimes = pattern(Seq(22, 25, 5), grid).generate()
+
+    val startBassTimes = Melody.absolute(start, bassTimes).drop(1)
+
+    (startBassTimes zip Seq((0.3f, -0.3f), (-0.3f, 0.3f))).foreach {
+      case (time, (startPan, endPan)) =>
+        play(time, dur)
+        .fmControl(
+          carFreqControl = line(dur, spectrum(0), spectrum(0)),
+          modFreqControl = line(dur, spectrum(0), spectrum(0)),
+          modIndexControl = ar(dur, 0.33f, (5, 13, 8)),
+          attack = 0.66f,
+          amp = 0.4f)
+        .pan(startPan, endPan)
+        .send()
+    }
+
 
     playSideBands(start = start,
       times = pattern(Seq(63), grid).generate(),
@@ -747,6 +778,25 @@ object MelodyThree {
 
     val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
 
+    val dur = rhythmSpectrum(1)
+
+    val bassTimes = pattern(Seq(29, 18, 5), grid).generate()
+
+    val startBassTimes = Melody.absolute(start, bassTimes).drop(1)
+
+    (startBassTimes zip Seq((-0.8f, -0.5f), (0.5f, 0.8f))).foreach {
+      case (time, (startPan, endPan)) =>
+        play(time, dur)
+          .fmControl(
+            carFreqControl = line(dur, spectrum(0), spectrum(0)),
+            modFreqControl = line(dur, spectrum(0), spectrum(0)),
+            modIndexControl = ar(dur, 0.33f, (7, 13, 5)),
+            attack = 0.5f,
+            amp = 0.4f)
+          .pan(startPan, endPan)
+          .send()
+    }
+
     playSideBands(start = start,
       times = pattern(Seq(76), grid).generate(),
       freq = sidebands(1)._1,
@@ -850,13 +900,6 @@ object MelodyThree {
   }
 
   def main(args: Array[String]): Unit = {
-    val c2 = noteToHertz('c2)
-    val c3 = noteToHertz('c3)
-    val cminus5 = noteToHertz('c0) / 2f / 2f / 2f / 2f / 2f
-
-    val naturalFact = makeFact(c2, c3)
-    val rhythmSpectrum = makeSpectrum2(cminus5, naturalFact, 25)
-
     BusGenerator.reset()
     implicit val player: MusicPlayer = MusicPlayer()
 
@@ -865,6 +908,5 @@ object MelodyThree {
     setupNodes(player)
 
     melodyThree(0)
-
   }
 }
