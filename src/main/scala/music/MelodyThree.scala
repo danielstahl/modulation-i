@@ -2,10 +2,13 @@ package music
 
 import music.Instruments.ARControlInstrumentBuilder.ar
 import music.Instruments.LineControlInstrumentBuilder.line
+import music.Instruments.SineControlReplaceInstrumentBuilder.sine
+import music.Instruments._
 import music.MelodyThree.ValueGenerator.{pattern, _}
-import net.soundmining.Instrument.setupNodes
+import net.soundmining.Instrument.{EFFECT, TAIL_ACTION, setupNodes}
 import net.soundmining.Note.noteToHertz
 import net.soundmining.Spectrum.{makeFact, makeFmSynthesis, makeSpectrum2}
+import net.soundmining.Utils.absoluteTimeToMillis
 import net.soundmining.{BusGenerator, Melody, MusicPlayer}
 object MelodyThree {
 
@@ -49,9 +52,112 @@ object MelodyThree {
   */
 
 
+  def frontEffect(bus: Int)(implicit player: MusicPlayer): Unit = {
 
-  def effect(bus: Int)(implicit player: MusicPlayer): Unit = {
+    val dur = 360
+    val tempBus = BusGenerator.nextAudio()
 
+    val volume = monoVolumeInstrument
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .dur(dur)
+      .in(bus)
+      .out(tempBus)
+      .ampBus.control(line(dur, 0.2f, 0.2f))
+      .buildInstruments()
+
+
+    val combFilter = new MonoCombReplaceInstrumentBuilder()
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .in(tempBus)
+      .dur(dur)
+      .decayTimeBus.control(
+        line(dur, 0.6f, 0.5f, nodeId = EFFECT),
+        sine(dur, 0.05f, 0.04f, 0.04f, 0.05f, nodeId = EFFECT))
+      .delayBus.control(
+        line(dur, 0.20f, 0.15f, nodeId = EFFECT),
+        sine(dur, 0.04f, 0.05f, 0.05f, 0.04f, nodeId = EFFECT))
+      .maxDelay(0.3f)
+      .buildInstruments()
+
+    val highPassFilter = new HighpassReplaceInstrumentBuilder()
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .in(tempBus)
+      .dur(dur)
+      .freqBus.control(
+        line(dur, 700, 800, nodeId = EFFECT),
+        sine(dur, 0.04f, 0.05f, 10.05f, 10.04f, nodeId = EFFECT))
+      .buildInstruments()
+
+    val pan1 = panInstrument
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .dur(dur)
+      .in(tempBus)
+      .out(0)
+      .panBus.control(line(dur, 0.9f, 0.8f, EFFECT))
+      .buildInstruments()
+
+    val pan2 = panInstrument
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .dur(dur)
+      .in(tempBus)
+      .out(0)
+      .panBus.control(line(dur, -0.9f, -0.8f, EFFECT))
+      .buildInstruments()
+
+    player.sendNew(absoluteTimeToMillis(0), volume ++ combFilter ++ highPassFilter ++ pan1 ++ pan2)
+  }
+
+  def backEffect(bus: Int)(implicit player: MusicPlayer): Unit = {
+    val tempBus = BusGenerator.nextAudio()
+
+    val dur = 360
+
+    val volume = monoVolumeInstrument
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .dur(dur)
+      .in(bus)
+      .out(tempBus)
+      .ampBus.control(line(dur, 0.6f, 0.6f))
+      .buildInstruments()
+
+    val allpassFilter = new MonoAllpassReplaceInstrumentBuilder()
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .in(tempBus)
+      .dur(dur)
+      .decayTimeBus.control(
+        line(dur, 8f, 10f, nodeId = EFFECT),
+        sine(dur, 0.01f, 0.01f, 0.01f, 0.01f, nodeId = EFFECT))
+      .delayBus.control(line(dur, 0.6f, 0.3f, nodeId = EFFECT))
+      .maxDelay(0.6f)
+      .buildInstruments()
+
+
+    val pan1 = panInstrument
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .dur(dur)
+      .in(tempBus)
+      .out(0)
+      .panBus.control(line(dur, 1f, -1f, EFFECT))
+      .buildInstruments()
+
+    val pan2 = panInstrument
+      .nodeId(EFFECT)
+      .addAction(TAIL_ACTION)
+      .dur(dur)
+      .in(tempBus)
+      .out(0)
+      .panBus.control(line(dur, -1f, 1f, EFFECT))
+      .buildInstruments()
+
+    player.sendNew(absoluteTimeToMillis(0), volume ++ allpassFilter ++ pan1 ++ pan2)
   }
 
   trait ValueGenerator[T] {
@@ -98,12 +204,18 @@ object MelodyThree {
 
   }
 
-  def playSideBands(start: Float, times: Seq[Float], freq: Float, attacks: Seq[Float], pans: Seq[(Float, Float)], amps: Seq[Float])(implicit play: Player, player: MusicPlayer): Unit = {
+  def playSideBands(start: Float,
+                    times: Seq[Float],
+                    freq: Float,
+                    attacks: Seq[Float],
+                    pans: Seq[(Float, Float)],
+                    amps: Seq[Float],
+                    effectBus: Int)(implicit player: MusicPlayer): Unit = {
     val startTimes = Melody.absolute(start, times)
 
     (startTimes zip times zip attacks zip pans zip amps).foreach {
       case ((((startTime, time), attack), (panstart, panend)), amp) =>
-        play(startTime, time)
+        Player(startTime, time, effectBus)
           .sine(freq = freq, attack = attack, amp = amp)
           .pan(panstart, panend)
           .send()
@@ -121,14 +233,16 @@ object MelodyThree {
     val spectrum = makeSpectrum2(c0, naturalFact, 25)
     val rhythmSpectrum = makeSpectrum2(cminus5, naturalFact, 25)
 
-    implicit val play: Player = Player()
+    val frontEffectBus = BusGenerator.nextAudio()
+    val backEffectBus = BusGenerator.nextAudio()
 
-    effect(play.effectBus)
+    frontEffect(frontEffectBus)
+    backEffect(backEffectBus)
 
     val times = Seq(
       rhythmSpectrum(3) * 22,
       rhythmSpectrum(1) * 35,
-      rhythmSpectrum(0) * 63,
+      rhythmSpectrum.head * 63,
       rhythmSpectrum(3) * 40,
       rhythmSpectrum(1) * 40,
       rhythmSpectrum.head * 70,
@@ -137,17 +251,22 @@ object MelodyThree {
     val startTimes = Melody.absolute(start, times)
     println(s"startTimes $startTimes")
 
-    melodyThreePart1(start = startTimes.head, spectrum, rhythmSpectrum)
-    melodyThreePart2(start = startTimes(1), spectrum, rhythmSpectrum)
-    melodyThreePart3(start = startTimes(2), spectrum, rhythmSpectrum)
-    melodyThreePart4(start = startTimes(3), spectrum, rhythmSpectrum)
-    melodyThreePart5(start = startTimes(4), spectrum, rhythmSpectrum)
-    melodyThreePart6(start = startTimes(5), spectrum, rhythmSpectrum)
-    melodyThreePart7(start = startTimes(6), spectrum, rhythmSpectrum)
+    melodyThreePart1(start = startTimes.head, spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
+    melodyThreePart2(start = startTimes(1), spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
+    melodyThreePart3(start = startTimes(2), spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
+    melodyThreePart4(start = startTimes(3), spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
+    melodyThreePart5(start = startTimes(4), spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
+    melodyThreePart6(start = startTimes(5), spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
+    melodyThreePart7(start = startTimes(6), spectrum, rhythmSpectrum, frontEffectBus, backEffectBus)
 
   }
 
-  def melodyThreePart1(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+  def melodyThreePart1(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
+
     val dur = rhythmSpectrum(2)
 
     val car = 1
@@ -160,13 +279,13 @@ object MelodyThree {
     val startTimes = Melody.absolute(0f, times)
 
     startTimes.foreach(time =>
-      play(time, dur)
+      Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(car), spectrum(car)),
           modFreqControl = line(dur, spectrum(mod), spectrum(mod)),
           modIndexControl = ar(dur, 0.66f, (5, 7, 6)),
           attack = 0.33f,
-          amp = 0.5f)
+          amp = 0.4f)
         .pan(0, 0)
         .send())
 
@@ -176,7 +295,7 @@ object MelodyThree {
     val startBassTimes = Melody.absolute(start, bassTimes).drop(1)
 
     startBassTimes.foreach(time =>
-      play(time, dur)
+      Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(0), spectrum(0)),
           modFreqControl = line(dur, spectrum(0), spectrum(0)),
@@ -187,20 +306,25 @@ object MelodyThree {
         .send())
 
     val sidebands = makeFmSynthesis(spectrum(car), spectrum(mod), 30)
+    val overallAmp = 1.0f
 
-    playSideBands(start = start,
+    playSideBands(
+      start = start,
       times = pattern(Seq(22), grid).generate(),
       freq = sidebands(1)._1,
       pans = Seq((-0.1f, -0.1f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.2f))
+      amps = Seq(0.2f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
-    playSideBands(start = start,
+    playSideBands(
+      start = start,
       times = pattern(Seq(22), grid).generate(),
       freq = sidebands(1)._2,
       pans = Seq((0.1f, 0.1f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.2f))
+      amps = Seq(0.2f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -209,7 +333,8 @@ object MelodyThree {
       freq = sidebands(3)._1,
       pans = Seq((0.2f, -0.6f), (-0.2f, 0.6f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.1f, 0.1f))
+      amps = Seq(0.1f, 0.1f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -217,7 +342,8 @@ object MelodyThree {
       freq = sidebands(3)._2,
       pans = Seq((0.3f, -0.7f), (-0.3f, 0.7f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.1f, 0.1f))
+      amps = Seq(0.1f, 0.1f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -226,7 +352,8 @@ object MelodyThree {
       freq = sidebands(5)._1,
       pans = Seq((-0.2f, 0.6f), (0.2f, -0.6f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -234,7 +361,8 @@ object MelodyThree {
       freq = sidebands(5)._2,
       pans = Seq((-0.1f, 0.7f), (0.1f, -0.7f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -243,7 +371,8 @@ object MelodyThree {
       freq = sidebands(7)._1,
       pans = Seq((-0.9f, -0.6f), (-0.6f, -0.3f), (-0.3f, 0.3f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.03f, 0.03f, 0.03f))
+      amps = Seq(0.03f, 0.03f, 0.03f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -251,8 +380,8 @@ object MelodyThree {
       freq = sidebands(7)._2,
       pans = Seq((-0.8f, -0.5f), (-0.5f, -0.2f), (-0.2f, 0.2f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.03f, 0.03f, 0.03f))
-
+      amps = Seq(0.03f, 0.03f, 0.03f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -260,7 +389,8 @@ object MelodyThree {
       freq = sidebands(9)._1,
       pans = Seq((0.9f, 0.3f), (0.4f, -0.2f), (-0.1f, -0.4f), (-0.3f, -0.6f), (-0.7f, -0.4f), (-0.3f, 0.0f)),
       attacks = Seq(0.33f, 0.5f, 0.66f, 0.33f, 0.5f, 0.66f),
-      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f))
+      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -268,10 +398,16 @@ object MelodyThree {
       freq = sidebands(9)._2,
       pans = Seq((0.8f, 0.2f), (0.5f, -0.1f), (-0.2f, -0.5f), (-0.2f, -0.7f), (-0.8f, -0.3f), (-0.4f, 0.0f)),
       attacks = Seq(0.33f, 0.5f, 0.66f, 0.33f, 0.5f, 0.66f),
-      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f))
-  }
+      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
-  def melodyThreePart2(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+}
+
+  def melodyThreePart2(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
     val grid = pulse(40, rhythmSpectrum(1))
 
     val dur = rhythmSpectrum(1)
@@ -284,7 +420,7 @@ object MelodyThree {
     val mod = 5
 
     startTimes.foreach(time => {
-      play(time, dur)
+      Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(car), spectrum(car)),
           modFreqControl = line(dur, spectrum(mod), spectrum(mod)),
@@ -294,13 +430,13 @@ object MelodyThree {
         .pan(-0.1f, -0.1f)
         .send()
 
-      play(time, rhythmSpectrum(2))
+      Player(time, rhythmSpectrum(2), frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(5), spectrum(5)),
           modFreqControl = line(dur, spectrum(6), spectrum(6)),
           modIndexControl = ar(dur, 0.33f, (5, 7, 6)),
           attack = 0.66f,
-          amp = 0.1f)
+          amp = 0.2f)
         .pan(0.1f, 0.1f)
         .send()
     })
@@ -314,7 +450,7 @@ object MelodyThree {
 
     (startBassTimes zip Seq((-0.3f, 0.3f), (0.3f, -0.3f))).foreach {
       case (time, (startPan, endPan)) =>
-        play(time, dur)
+        Player(time, dur, frontEffectBus)
           .fmControl(
             carFreqControl = line(dur, spectrum(0), spectrum(0)),
             modFreqControl = line(dur, spectrum(0), spectrum(0)),
@@ -325,19 +461,23 @@ object MelodyThree {
           .send()
     }
 
+    val overallAmp = 0.3f
+
     playSideBands(start = start,
       times = pattern(Seq(35), grid).generate(),
       freq = sidebands(0)._1,
       pans = Seq((-0.1f, -0.1f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.2f))
+      amps = Seq(0.2f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(35), grid).generate(),
       freq = sidebands2(0)._1,
       pans = Seq((0.1f, 0.1f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.2f))
+      amps = Seq(0.2f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -345,28 +485,32 @@ object MelodyThree {
       freq = sidebands(2)._1,
       pans = Seq((-0.9f, -0.9f)),
       attacks = Seq(0.33f),
-      amps = Seq(0.1f))
+      amps = Seq(0.1f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(35), grid).generate(),
       freq = sidebands(2)._2,
       pans = Seq((-0.8f, -0.8f)),
       attacks = Seq(0.33f),
-      amps = Seq(0.1f))
+      amps = Seq(0.1f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(35), grid).generate(),
       freq = sidebands2(2)._1,
       pans = Seq((0.9f, 0.9f)),
       attacks = Seq(0.66f),
-      amps = Seq(0.1f))
+      amps = Seq(0.1f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(35), grid).generate(),
       freq = sidebands2(2)._2,
       pans = Seq((0.8f, 0.8f)),
       attacks = Seq(0.66f),
-      amps = Seq(0.1f))
+      amps = Seq(0.1f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -375,7 +519,8 @@ object MelodyThree {
       freq = sidebands(5)._1,
       pans = Seq((0.2f, -0.6f), (-0.2f, 0.6f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -383,7 +528,8 @@ object MelodyThree {
       freq = sidebands(5)._2,
       pans = Seq((0.3f, -0.7f), (-0.3f, 0.7f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f).map(_ * overallAmp),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -392,7 +538,8 @@ object MelodyThree {
       freq = sidebands2(9)._1,
       pans = Seq((0.1f, 0.9f), (0.9f, 0.1f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.03f, 0.03f))
+      amps = Seq(0.03f, 0.03f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -400,10 +547,15 @@ object MelodyThree {
       freq = sidebands2(9)._2,
       pans = Seq((-0.1f, -0.9f), (-0.9f, 0.1f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.03f, 0.03f))
+      amps = Seq(0.03f, 0.03f),
+      effectBus = backEffectBus)
   }
 
-  def melodyThreePart3(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+  def melodyThreePart3(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
     val grid = pulse(70, rhythmSpectrum(0))
 
     val dur = rhythmSpectrum(0)
@@ -417,7 +569,7 @@ object MelodyThree {
     val mod = 8
 
     startTimes.foreach(time => {
-      play(time, dur)
+      Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(car), spectrum(car)),
           modFreqControl = line(dur, spectrum(mod), spectrum(mod)),
@@ -433,7 +585,7 @@ object MelodyThree {
     val startTimes2 = Melody.absolute(start, times2).drop(1)
 
     startTimes2.foreach(time => {
-      play(time, dur)
+      Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(8), spectrum(8)),
           modFreqControl = line(dur, spectrum(7), spectrum(7)),
@@ -453,7 +605,7 @@ object MelodyThree {
 
     (startBassTimes zip Seq((0.3f, -0.3f), (-0.3f, 0.3f))).foreach {
       case (time, (startPan, endPan)) =>
-        play(time, dur)
+        Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spectrum(0), spectrum(0)),
           modFreqControl = line(dur, spectrum(0), spectrum(0)),
@@ -470,14 +622,16 @@ object MelodyThree {
       freq = sidebands(0)._1,
       pans = Seq((-0.7f, -0.9f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.1f))
+      amps = Seq(0.1f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(63), grid).generate(),
       freq = sidebands2(0)._1,
       pans = Seq((0.7f, 0.9f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.05f))
+      amps = Seq(0.05f),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -485,28 +639,32 @@ object MelodyThree {
       freq = sidebands(3)._1,
       pans = Seq((-0.9f, -0.6f)),
       attacks = Seq(0.33f),
-      amps = Seq(0.05f))
+      amps = Seq(0.05f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(63), grid).generate(),
       freq = sidebands(3)._2,
       pans = Seq((-0.7f, -0.8f)),
       attacks = Seq(0.33f),
-      amps = Seq(0.05f))
+      amps = Seq(0.05f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(63), grid).generate(),
       freq = sidebands2(2)._1,
       pans = Seq((0.9f, 0.6f)),
       attacks = Seq(0.66f),
-      amps = Seq(0.03f))
+      amps = Seq(0.03f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(63), grid).generate(),
       freq = sidebands2(2)._2,
       pans = Seq((0.7f, 0.8f)),
       attacks = Seq(0.66f),
-      amps = Seq(0.03f))
+      amps = Seq(0.03f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -515,7 +673,8 @@ object MelodyThree {
       freq = sidebands(5)._1,
       pans = Seq((0.9f, 0.6f), (0.5f, 0.7f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.04f, 0.04f))
+      amps = Seq(0.04f, 0.04f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -523,7 +682,8 @@ object MelodyThree {
       freq = sidebands(5)._2,
       pans = Seq((0.7f, 0.3f), (0.2f, 0.8f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.04f, 0.04f))
+      amps = Seq(0.04f, 0.04f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -532,7 +692,8 @@ object MelodyThree {
       freq = sidebands2(5)._1,
       pans = Seq((-0.9f, -0.6f), (-0.5f, -0.7f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.02f, 0.02f))
+      amps = Seq(0.02f, 0.02f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -540,7 +701,8 @@ object MelodyThree {
       freq = sidebands2(5)._2,
       pans = Seq((-0.7f, -0.3f), (-0.2f, -0.8f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.02f, 0.02f))
+      amps = Seq(0.02f, 0.02f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -549,7 +711,8 @@ object MelodyThree {
       freq = sidebands(7)._1,
       pans = Seq((0.6f, 0.2f), (0.1f, 0.7f), (0.6f, 0.2f)),
       attacks = Seq(0.66f, 0.5f, 0.33f),
-      amps = Seq(0.03f, 0.03f, 0.03f))
+      amps = Seq(0.03f, 0.03f, 0.03f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -557,7 +720,8 @@ object MelodyThree {
       freq = sidebands(7)._2,
       pans = Seq((0.5f, 0.3f), (0.2f, 0.8f), (0.5f, 0.3f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.03f, 0.04f, 0.03f))
+      amps = Seq(0.03f, 0.04f, 0.03f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -566,7 +730,8 @@ object MelodyThree {
       freq = sidebands2(7)._1,
       pans = Seq((-0.6f, -0.2f), (-0.1f, -0.7f), (-0.6f, -0.2f)),
       attacks = Seq(0.66f, 0.5f, 0.33f),
-      amps = Seq(0.01f, 0.01f, 0.01f))
+      amps = Seq(0.01f, 0.01f, 0.01f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -574,11 +739,16 @@ object MelodyThree {
       freq = sidebands2(7)._2,
       pans = Seq((-0.5f, -0.3f), (-0.2f, -0.8f), (-0.5f, -0.3f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.01f, 0.01f, 0.01f))
+      amps = Seq(0.01f, 0.01f, 0.01f),
+      effectBus = backEffectBus)
 
   }
 
-  def melodyThreePart4(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+  def melodyThreePart4(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
     val dur = rhythmSpectrum(2)
 
     val car = 3
@@ -593,7 +763,7 @@ object MelodyThree {
     val startTimes = Melody.absolute(start, times)
 
     startTimes.foreach(time =>
-      play(time, dur)
+      Player(time, dur, frontEffectBus)
         .fmControl(
           carFreqControl = line(dur, spec(car), spec(car)),
           modFreqControl = line(dur, spec(mod), spec(mod)),
@@ -610,14 +780,16 @@ object MelodyThree {
       freq = sidebands(1)._1,
       pans = Seq((-0.1f, -0.1f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.2f))
+      amps = Seq(0.2f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(37), grid).generate(),
       freq = sidebands(1)._2,
       pans = Seq((0.1f, 0.1f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.2f))
+      amps = Seq(0.2f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -626,7 +798,8 @@ object MelodyThree {
       freq = sidebands(3)._1,
       pans = Seq((0.2f, -0.6f), (-0.2f, 0.6f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.1f, 0.1f))
+      amps = Seq(0.1f, 0.1f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -634,7 +807,8 @@ object MelodyThree {
       freq = sidebands(3)._2,
       pans = Seq((0.3f, -0.7f), (-0.3f, 0.7f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.1f, 0.1f))
+      amps = Seq(0.1f, 0.1f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -643,7 +817,8 @@ object MelodyThree {
       freq = sidebands(5)._1,
       pans = Seq((-0.2f, 0.6f), (0.2f, -0.6f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -651,7 +826,8 @@ object MelodyThree {
       freq = sidebands(5)._2,
       pans = Seq((-0.1f, 0.7f), (0.1f, -0.7f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -660,7 +836,8 @@ object MelodyThree {
       freq = sidebands(7)._1,
       pans = Seq((-0.9f, -0.6f), (-0.6f, -0.3f), (-0.3f, 0.3f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.03f, 0.03f, 0.03f))
+      amps = Seq(0.03f, 0.03f, 0.03f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -668,7 +845,8 @@ object MelodyThree {
       freq = sidebands(7)._2,
       pans = Seq((-0.8f, -0.5f), (-0.5f, -0.2f), (-0.2f, 0.2f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.03f, 0.03f, 0.03f))
+      amps = Seq(0.03f, 0.03f, 0.03f),
+      effectBus = backEffectBus)
 
 
     playSideBands(
@@ -677,7 +855,8 @@ object MelodyThree {
       freq = sidebands(9)._1,
       pans = Seq((0.9f, 0.3f), (0.4f, -0.2f), (-0.1f, -0.4f), (-0.3f, -0.6f), (-0.7f, -0.4f), (-0.3f, 0.0f)),
       attacks = Seq(0.33f, 0.5f, 0.66f, 0.33f, 0.5f, 0.66f),
-      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f))
+      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f),
+      effectBus = backEffectBus)
 
     playSideBands(
       start = start,
@@ -685,10 +864,15 @@ object MelodyThree {
       freq = sidebands(9)._2,
       pans = Seq((0.8f, 0.2f), (0.5f, -0.1f), (-0.2f, -0.5f), (-0.2f, -0.7f), (-0.8f, -0.3f), (-0.4f, 0.0f)),
       attacks = Seq(0.33f, 0.5f, 0.66f, 0.33f, 0.5f, 0.66f),
-      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f))
+      amps = Seq(0.02f, 0.02f, 0.02f, 0.02f, 0.02f, 0.02f),
+      effectBus = backEffectBus)
   }
 
-  def melodyThreePart5(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+  def melodyThreePart5(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
 
     //1, 1, 2, 3, 5, 8, 13, 21, 34, 55
     // based on part2 sidebands 1
@@ -706,7 +890,8 @@ object MelodyThree {
       freq = sidebands(1)._1,
       pans = Seq((0.0f, 0.0f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.5f))
+      amps = Seq(0.5f),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -714,14 +899,16 @@ object MelodyThree {
       freq = sidebands(3)._1,
       pans = Seq((0.3f, 0.3f), (0.3f, 0.3f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.3f, 0.3f))
+      amps = Seq(0.3f, 0.3f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(13, 21), grid).generate(),
       freq = sidebands(3)._2,
       pans = Seq((-0.3f, -0.3f), (-0.3f, -0.3f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.3f, 0.3f))
+      amps = Seq(0.3f, 0.3f),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -729,14 +916,16 @@ object MelodyThree {
       freq = sidebands(6)._1,
       pans = Seq((0.6f, 0.6f), (0.6f, 0.6f), (0.6f, 0.6f)),
       attacks = Seq(0.66f, 0.5f, 0.33f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(13, 13, 13), grid).generate(),
       freq = sidebands(6)._2,
       pans = Seq((-0.6f, -0.6f), (-0.6f, -0.6f), (-0.6f, -0.6f)),
       attacks = Seq(0.66f, 0.5f, 0.33f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
 
 
@@ -745,14 +934,16 @@ object MelodyThree {
       freq = sidebands(10)._1,
       pans = Seq((0.8f, 0.8f), (0.8f, 0.8f), (0.8f, 0.8f), (0.8f, 0.8f), (0.8f, 0.8f)),
       attacks = Seq(0.5f, 0.33f, 0.5f, 0.66f, 0.5f),
-      amps = Seq(0.1f, 0.1f, 0.1f, 0.1f, 0.1f))
+      amps = Seq(0.1f, 0.1f, 0.1f, 0.1f, 0.1f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(8, 8, 8, 8, 8), grid).generate(),
       freq = sidebands(10)._2,
       pans = Seq((-0.8f, -0.8f), (-0.8f, -0.8f), (-0.8f, -0.8f), (-0.8f, -0.8f), (-0.8f, -0.8f)),
       attacks = Seq(0.5f, 0.33f, 0.5f, 0.66f, 0.5f),
-      amps = Seq(0.1f, 0.1f, 0.1f, 0.1f, 0.1f))
+      amps = Seq(0.1f, 0.1f, 0.1f, 0.1f, 0.1f),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -760,17 +951,23 @@ object MelodyThree {
       freq = sidebands(15)._1,
       pans = Seq((0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f), (0.9f, 0.9f)),
       attacks = Seq(0.66f, 0.5f, 0.33f, 0.5f, 0.66f, 0.5f, 0.33f, 0.5f),
-      amps = Seq(0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(5, 5, 5, 5, 5, 5, 5, 5), grid).generate(),
       freq = sidebands(15)._2,
       pans = Seq((-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f), (-0.9f, -0.9f)),
       attacks = Seq(0.66f, 0.5f, 0.33f, 0.5f, 0.66f, 0.5f, 0.33f, 0.5f),
-      amps = Seq(0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f))
+      amps = Seq(0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f, 0.05f),
+      effectBus = backEffectBus)
   }
 
-  def melodyThreePart6(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
+  def melodyThreePart6(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
     val grid = pulse(70, rhythmSpectrum(0))
 
     val car = 7
@@ -786,7 +983,7 @@ object MelodyThree {
 
     (startBassTimes zip Seq((-0.8f, -0.5f), (0.5f, 0.8f))).foreach {
       case (time, (startPan, endPan)) =>
-        play(time, dur)
+        Player(time, dur, frontEffectBus)
           .fmControl(
             carFreqControl = line(dur, spectrum(0), spectrum(0)),
             modFreqControl = line(dur, spectrum(0), spectrum(0)),
@@ -802,7 +999,8 @@ object MelodyThree {
       freq = sidebands(1)._1,
       pans = Seq((0.0f, 0.0f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.5f))
+      amps = Seq(0.5f),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -810,14 +1008,16 @@ object MelodyThree {
       freq = sidebands(2)._1,
       pans = Seq((0.7f, 0.7f), (0.7f, 0.7f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.3f, 0.3f))
+      amps = Seq(0.3f, 0.3f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(47, 29), grid).generate(),
       freq = sidebands(3)._2,
       pans = Seq((-0.7f, -0.7f), (-0.7f, -0.7f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.3f, 0.3f))
+      amps = Seq(0.3f, 0.3f),
+      effectBus = backEffectBus)
 
 
 
@@ -826,27 +1026,34 @@ object MelodyThree {
       freq = sidebands(5)._2,
       pans = Seq((0.5f, 0.5f), (0.5f, 0.5f), (0.5f, 0.5f)),
       attacks = Seq(0.66f, 0.5f, 0.33f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(29, 18, 18), grid).generate(),
       freq = sidebands(7)._1,
       pans = Seq((-0.1f, 0.1f), (0.1f, -0.1f), (-0.1f, 0.1f)),
       attacks = Seq(0.5f, 0.66f, 0.33f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(18, 18, 29), grid).generate(),
       freq = sidebands(9)._2,
       pans = Seq((-0.5f, -0.5f), (-0.5f, -0.5f), (-0.5f, -0.5f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
     // 18 29 18
   }
 
-  def melodyThreePart7(start: Float, spectrum: Seq[Float], rhythmSpectrum: Seq[Float])(implicit player: MusicPlayer, play: Player): Unit = {
-    val grid = pulse(40, rhythmSpectrum(3))
+  def melodyThreePart7(start: Float,
+                       spectrum: Seq[Float],
+                       rhythmSpectrum: Seq[Float],
+                       frontEffectBus: Int,
+                       backEffectBus: Int)(implicit player: MusicPlayer): Unit = {
+    val grid: PulseGenerator[Float] = pulse(40, rhythmSpectrum(3))
 
     val car = 1
     val mod = 3
@@ -858,7 +1065,8 @@ object MelodyThree {
       freq = sidebands(1)._1,
       pans = Seq((0.0f, 0.0f)),
       attacks = Seq(0.5f),
-      amps = Seq(0.5f))
+      amps = Seq(0.5f),
+      effectBus = backEffectBus)
 
 
     playSideBands(start = start,
@@ -866,14 +1074,16 @@ object MelodyThree {
       freq = sidebands(3)._1,
       pans = Seq((-0.2f, -0.2f), (-0.2f, -0.2f)),
       attacks = Seq(0.33f, 0.66f),
-      amps = Seq(0.3f, 0.3f))
+      amps = Seq(0.3f, 0.3f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(18, 11), grid).generate(),
       freq = sidebands(5)._1,
       pans = Seq((0.2f, 0.2f), (0.2f, 0.2f)),
       attacks = Seq(0.66f, 0.33f),
-      amps = Seq(0.3f, 0.3f))
+      amps = Seq(0.3f, 0.3f),
+      effectBus = backEffectBus)
 
 
 
@@ -882,21 +1092,24 @@ object MelodyThree {
       freq = sidebands(7)._1,
       pans = Seq((0.5f, 0.7f), (0.7f, 0.9f), (0.9f, 0.6f)),
       attacks = Seq(0.66f, 0.5f, 0.33f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(18, 11, 11), grid).generate(),
       freq = sidebands(9)._1,
       pans = Seq((-0.1f, 0.1f), (0.1f, -0.1f), (-0.1f, 0.1f)),
       attacks = Seq(0.5f, 0.66f, 0.33f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
 
     playSideBands(start = start,
       times = pattern(Seq(11, 11, 18), grid).generate(),
       freq = sidebands(11)._1,
       pans = Seq((-0.5f, -0.7f), (-0.7f, -0.9f), (-0.9f, -0.6f)),
       attacks = Seq(0.33f, 0.5f, 0.66f),
-      amps = Seq(0.2f, 0.2f, 0.2f))
+      amps = Seq(0.2f, 0.2f, 0.2f),
+      effectBus = backEffectBus)
   }
 
   def main(args: Array[String]): Unit = {

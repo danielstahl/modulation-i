@@ -57,3 +57,13 @@ Synth("fm", [dur: 15, carFreqBus: 13, modFreqBus: 14, modIndexBus: 15, ampBus: 1
 { SinOsc.ar(440+(SinOsc.ar(880)*880*16), 0.0,0.1) }.play;
 
 
+(
+{
+	CombN.ar(
+		in: SinOsc.ar(500.rrand(1000), 0, 0.2) * Line.kr(1, 0, 0.1),
+		maxdelaytime: 0.3,
+		delaytime: 0.25,
+		decaytime: 1)
+}.play;
+)
+

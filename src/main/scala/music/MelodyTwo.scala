@@ -35,9 +35,9 @@ object MelodyTwo {
 
     println(s"Spectrum: ${spectrum.zipWithIndex}")
     println(s"Rhythm Spectrum: ${rhythmSpectrum.zipWithIndex}")
-    val play = Player()
+    val effectBus = BusGenerator.nextAudio()
 
-    effect(play.effectBus)
+    effect(effectBus)
 
     val dur = rhythmSpectrum(24) * 3
 
@@ -45,7 +45,7 @@ object MelodyTwo {
 
     val start2 = rhythmSpectrum(24) * 2
 
-    play(0, dur)
+    Player(0, dur, effectBus)
       .fmControl(
         carFreqControl = line(dur, spectrum(2), spectrum(1)),
         modFreqControl = line(dur, spectrum(3), spectrum(3)),
@@ -54,7 +54,7 @@ object MelodyTwo {
       .pan(-0.3f, 1.0f)
       .send()
 
-    play(start2, dur2)
+    Player(start2, dur2, effectBus)
       .fmControl(
         carFreqControl = line(dur2, spectrum(9), spectrum(9)),
         modFreqControl = line(dur2, spectrum(11), spectrum(10)),
@@ -63,17 +63,17 @@ object MelodyTwo {
       .pan(0.3f, -0.6f)
       .send()
 
-    play(start2 + dur, dur2)
+    Player(start2 + dur, dur2, effectBus)
       .sine(spectrum(12), 0.3f)
       .pan(-0.3f, 0.6f)
       .send()
 
-    play(start2 + dur + dur, dur2)
+    Player(start2 + dur + dur, dur2, effectBus)
       .sine(spectrum(8), 0.6f)
       .pan(1.0f, 0.3f)
       .send()
 
-    play(start2 + dur + dur + dur, dur2)
+    Player(start2 + dur + dur + dur, dur2, effectBus)
       .sine(spectrum(9), 0.3f)
       .pan(-1.0f, -0.3f)
       .send()

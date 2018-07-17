@@ -8,11 +8,11 @@ import net.soundmining.Instrument.{SOURCE, TAIL_ACTION}
 import net.soundmining.{BusGenerator, ControlInstrumentBuilder, MusicPlayer}
 import net.soundmining.Utils.absoluteTimeToMillis
 
-case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
+case class Player(start: Float, dur: Float, effectBus: Int, bus: Int = BusGenerator.nextAudio()) {
   var instrumentBundle: Seq[Seq[Object]] = Seq()
   var panBundle: Seq[Seq[Object]] = Seq()
 
-  def sine(freq: Float, attack: Float, amp: Float = 0.2f): PlayClass = {
+  def sine(freq: Float, attack: Float, amp: Float = 0.2f): Player = {
     instrumentBundle = new SineInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
@@ -23,7 +23,7 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     this
   }
 
-  def sineMod(freq: Float, attack: Float, freqBus: Int, amp: Float = 0.2f): PlayClass = {
+  def sineMod(freq: Float, attack: Float, freqBus: Int, amp: Float = 0.2f): Player = {
     val freqMod = new LineControlInstrumentBuilder()
       .out(freqBus)
       .control(freq, freq)
@@ -42,7 +42,7 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     this
   }
 
-  def sineSineAmp(freq: Float, amp: (Float, Float), ampSpeed: (Float, Float)): PlayClass = {
+  def sineSineAmp(freq: Float, amp: (Float, Float), ampSpeed: (Float, Float)): Player = {
     instrumentBundle = new SineInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
@@ -53,7 +53,7 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     this
   }
 
-  def pan(startPan: Float, endPan: Float): PlayClass = {
+  def pan(startPan: Float, endPan: Float): Player = {
     panBundle = new PanInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .dur(dur)
@@ -77,7 +77,7 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     player.sendNew(absoluteTimeToMillis(start), instrumentBundle ++ panBundle ++ effect)
   }
 
-  def fmControl(carFreqControl: ControlInstrumentBuilder, modFreqControl: ControlInstrumentBuilder, modIndexControl: ControlInstrumentBuilder, attack: Float, amp: Float = 0.2f): PlayClass = {
+  def fmControl(carFreqControl: ControlInstrumentBuilder, modFreqControl: ControlInstrumentBuilder, modIndexControl: ControlInstrumentBuilder, attack: Float, amp: Float = 0.2f): Player = {
     instrumentBundle = new FmInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
@@ -90,11 +90,11 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     this
   }
 
-  def fm(carFreq: Float, modFreq: Float, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): PlayClass = {
+  def fm(carFreq: Float, modFreq: Float, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): Player = {
     fmControl(line(dur, carFreq, carFreq), line(dur, modFreq, modFreq), ar(dur, indexAttack, index), attack, amp)
   }
 
-  def fmMod(carFreq: Float, modBus: Int, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): PlayClass = {
+  def fmMod(carFreq: Float, modBus: Int, indexAttack: Float, index: (Float, Float, Float), attack: Float, amp: Float = 0.2f): Player = {
     instrumentBundle = new FmInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
@@ -107,7 +107,7 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     this
   }
 
-  def pulse(freq: Float, width: (Float, Float), attack: Float, amp: Float = 0.2f)(implicit player: MusicPlayer): PlayClass = {
+  def pulse(freq: Float, width: (Float, Float), attack: Float, amp: Float = 0.2f)(implicit player: MusicPlayer): Player = {
     instrumentBundle = new  PulseInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
@@ -119,7 +119,7 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
     this
   }
 
-  def subtractiveChord(attack: Float, freqs: Seq[(Float, Float)], amp: Float = 0.2f): PlayClass = {
+  def subtractiveChord(attack: Float, freqs: Seq[(Float, Float)], amp: Float = 0.2f): Player = {
     val noise = new WhiteNoiseInstrumentBuilder()
       .addAction(TAIL_ACTION)
       .out(bus)
@@ -148,15 +148,5 @@ case class PlayClass(start: Float, dur: Float, bus: Int, effectBus: Int) {
 
     instrumentBundle = noise ++ filters ++ volume
     this
-  }
-}
-
-case class Player(effectBus: Int = BusGenerator.nextAudio()) {
-  def apply(start: Float, end: Float, bus: Int): PlayClass = {
-    PlayClass(start, end, bus, effectBus)
-  }
-
-  def apply(start: Float, end: Float): PlayClass = {
-    PlayClass(start, end, BusGenerator.nextAudio(), effectBus)
   }
 }

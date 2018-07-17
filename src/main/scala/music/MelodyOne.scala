@@ -124,38 +124,39 @@ object MelodyOne {
 
     val modulatorBus = BusGenerator.nextControl()
 
-    val play = Player()
-    effect(play.effectBus)
+    val effectBus = BusGenerator.nextAudio()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    effect(effectBus)
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
 
-    play(times.next(), durations.next()).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.7f, modulatorBus).pan(0f, 0f).send()
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(0.5f, 0.5f).send()
+
+    Player(times.next(), durations.next(), effectBus).sineMod(pitches.next(), 0.3f, modulatorBus).pan(-0.5f, -0.5f).send()
 
     val lowPitches = Seq(
       lowSpectrum(4), lowSpectrum(5), lowSpectrum(6),
@@ -171,20 +172,20 @@ object MelodyOne {
       spectrum(6), spectrum(8)
     ).iterator
 
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-0.5f, 0.5f).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-0.5f, 0.5f).send()
 
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-0.5f, 0.5f).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-0.5f, 0.5f).send()
 
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-0.5f, 0.5f).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-0.5f, 0.5f).send()
 
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
-    play(times2.next(), durations2.next()).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(-1, 0).send()
+    Player(times2.next(), durations2.next(), effectBus).fm(lowPitches.next(), carriers.next(), 0.5f, (0, 1, 0), 0.5f).pan(1, 0).send()
   }
 
   def main(args: Array[String]): Unit = {
